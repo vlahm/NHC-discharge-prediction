@@ -1,0 +1,11 @@
+in/
+out/
+figs/
+field_q_rds_files/
+debris/
+.Rproj.user
+.Rhistory
+log/
+cfg/google_auth.cfg
+*.zip
+*.swp

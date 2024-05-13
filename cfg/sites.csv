@@ -1,0 +1,10 @@
+site_code,    lon,        lat,		ws_area_ha
+NHCpoolDown,  -79.003028, 35.980647,
+NHCpoolUp,    -79.00733,  35.981754,
+NHCwbriffle,  -79.0309,   35.991133,
+NHCwbpoolDown,-79.03231,  35.991484,
+NHCwbpoolUp,  -79.033067, 35.9916,
+NHCcbriffle,  -79.025383, 35.985567,
+NHCcbpoolDown,-79.027,    35.986367,
+NHCcbpoolUp,  -79.028417, 35.986317,
+NHC,          -79.046011, 35.992507,4193.711
