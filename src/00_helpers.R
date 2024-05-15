@@ -125,7 +125,8 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
                 select(site_no, datetime = dateTime, discharge = X_00060_00000) %>%
                 pivot_wider(names_from = site_no, values_from = discharge)
 
-            site_nearby_A <- cull_gauges(site_nearby_A)
+            browser()
+            site_nearbyA <- cull_gauges(site_nearbyA)
 
             if(scale_q_by_area){
 
@@ -306,19 +307,60 @@ cull_gauges <- function(d){
 
         recording_intervals_m <- c(recording_intervals_m, Mode(diff(as.numeric(dtcol)) / 60))
     }
-    browser()
 
     if(length(unique(recording_intervals_m)) != 1){
 
-        if(all(recording_intervals_m != 15)){
-            warning('the typical recording interval for USGS discharge is 15 minutes, but ',
-                    'all of the gauges provided record in an interval other than 15m. Not sure ',
-                    'how this will handle. Proceed with caution.')
+        # if(all(recording_intervals_m != 15)){
+        #     warning('the typical recording interval for USGS discharge is 15 minutes, but ',
+        #             'all of the gauges provided record in an interval other than 15m. Not sure ',
+        #             'how this will handle. Proceed with caution.')
+        # }
+
+        weird_ints <- ! recording_intervals_m %in% c(5, 15, 30, 60)
+        if(any(weird_ints)){
+            warning('gauge recording intervals of 5, 15, 30, and 60 minutes are ',
+                    'expected, but interval(s) of ',
+                    paste(unique(recording_intervals_m[weird_ints]),
+                          collapse = ', '),
+                    ' was/were encountered. Probably nbd.')
         }
 
-        uncommon_intvl_cols <- which(recording_intervals_m != 15) + 1
+        max_intvl <- max(recording_intervals_m)
 
-        d[, uncommon_intvl_cols]
+        highres_col_ind <- which(recording_intervals_m < max_intvl) + 1
+        highres_cols <- colnames(d)[highres_col_ind]
+
+        cat(
+            'Recording intervals (minutes) by gauge:\n\t',
+            paste0(paste0(str_pad(paste0(colnames(d)[-1], ': '),
+                                  width = '12',
+                                  side = 'right')),
+                   paste0(recording_intervals_m, '\n\t'))
+        )
+
+        nrow0 <- nrow(d)
+        d <- filter(d, ! if_all(-all_of(c('datetime', highres_cols)), is.na))
+
+        message('Coercing all discharge series to the coarsest recording interval (',
+                max_intvl, ' mins). Dropping ', nrow0 - nrow(d), ' rows.')
+
+        nas_by_gauge <- apply(d[, -1], 2, function(x) sum(is.na(x)))
+        na_pcts_by_gauge <- apply(d[, -1], 2, function(x) round(sum(is.na(x)) / length(x), 2))
+        na_pcts_by_gauge <- sub('^0$', '~0', na_pcts_by_gauge)
+
+        cat(
+            'Missing values by gauge (any timestep with a missing value cannot be predicted):\n\t',
+            paste0(str_pad(paste0(names(nas_by_gauge), ': '),
+                           width = '12',
+                           side = 'right'),
+                   str_pad(paste0(unname(nas_by_gauge)),
+                           width = '6',
+                           side = 'right'),
+                   paste0(' (', unname(na_pcts_by_gauge), '%)\n\t'),
+                   collapse = ' ')
+        )
+
+        return(d)
     }
 }
 
