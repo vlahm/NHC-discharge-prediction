@@ -1,0 +1,11 @@
+clean up helpers
+	clean build_dir_structure()
+X	merge 01_ into 02
+clean comments
+handle inconsistent recording intervals
+	5 and 15-minute
+need to adjust this for very few samples
+
+HERE: return appropriate thing when cv is impossible
+	is it really impossible though? yeah, i can't just run the
+	mofo without replacement. that actually invalidates cv

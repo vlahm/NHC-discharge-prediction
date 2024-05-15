@@ -61,7 +61,9 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
                           target_daterange = NULL, overwrite = FALSE,
                           scale_q_by_area = TRUE){
 
-    #ms_Q_data: data.frame with posixct datetime column, and Q columns. Each Q column must
+    ms_Q_data <- NULL #
+
+    #ms_Q_data: [not ready yet. hard-coded NULL] data.frame with posixct datetime column, and Q columns. Each Q column must
     #   have its MacroSheds site_code as header. transformed columns will be created
     #datetime_snapdist_hrs: numeric. when joining donor gauge data to field
     #   discharge by datetime, allow joins of up to this number of hrs earlier/later
@@ -73,14 +75,25 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
     #can't remember if i built this to handle nearby_usgs_gages and ms_Q_data ,
     #but in any case that wasn't relevant for this study.
 
+    if(! paste0(site_code, '.csv') %in% list.files('in/field_Q')){
+        stop('File in/field_Q/<site_code>.csv is missing.')
+    }
+
     #load field discharge
     field_q = read_csv(glue('in/field_Q/{site_code}.csv')) %>%
         mutate(discharge = ifelse(discharge < 0, 0, discharge)) %>%
         rename(discharge_manual = discharge) %>%
-        distinct(datetime, .keep_all = TRUE)
+        distinct(datetime, .keep_all = TRUE) %>%
+        mutate(site_code := !!site_code)
     earliest_date = as.character(date(min(field_q$datetime)))
 
     #checks
+    aa = lubridate::interval(target_daterange[1], target_daterange[2])
+    bb = lubridate::interval(min(field_q$datetime), max(field_q$datetime))
+    if(! int_overlaps(aa, bb)){
+        stop('No overlap between target_daterange and field_Q samples')
+    }
+
     if(! is.null(target_daterange)){
 
         if(length(target_daterange) != 2){
@@ -100,104 +113,107 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
         field_q$discharge_manual = field_q$discharge_manual / wsa * 1000 #scale by 1000 so that neglog skew is negligible
     }
 
-    if(! file.exists(glue('in/usgs_Q/{site_code}.csv')) || overwrite){
+    # if(! file.exists(glue('in/usgs_Q/{site_code}.csv')) || overwrite){
 
-        site_nearbyA = NULL
-        if(! is.null(nearby_usgs_gages)){
+    site_nearbyA = NULL
+    # if(! is.null(nearby_usgs_gages)){
 
-            usgsq = dataRetrieval::readNWISdata(
-                sites = nearby_usgs_gages,
-                service = 'iv', #instantaneous values
-                parameterCd = '00060', #discharge (cfs)
-                startDate = target_daterange[1],
-                endDate = target_daterange[2]
-            )
+    # usgsq = dataRetrieval::readNWISdata(
+    #     sites = nearby_usgs_gages,
+    #     service = 'iv', #instantaneous values
+    #     parameterCd = '00060', #discharge (cfs)
+    #     startDate = target_daterange[1],
+    #     endDate = target_daterange[2]
+    # )
+    #
+    # if(! nrow(usgsq)) stop('no instantaneous Q?')
+    #
+    # # if(any(! usgsq$X_00060_00000_cd %in% c('A', 'P', 'A e', 'A R'))) stop()
+    # if(any(grepl('>', usgsq$X_00060_00000_cd))) warning(glue('">" detected in {site_code} donor Q'))
+    # if(any(grepl('<', usgsq$X_00060_00000_cd))) warning(glue('"<" detected in {site_code} donor Q'))
+    # if(any(usgsq$tz_cd != 'UTC')) stop('non-UTC datetime encountered')
+    #
+    # site_nearbyA = usgsq %>%
+    #     as_tibble() %>%
+    #     select(site_no, datetime = dateTime, discharge = X_00060_00000) %>%
+    #     pivot_wider(names_from = site_no, values_from = discharge)
+    #
+    # site_nearbyA <- cull_gauges(site_nearbyA)
+    #
+    # if(scale_q_by_area){
+    #
+    #     for(g in nearby_usgs_gages){
+    #
+    #         if(g == '06190540'){
+    #             #for NEON runthrough, this was the only site without
+    #             #a watershed area included in dataRetrieval. unlikely
+    #             #to be encountered again?
+    #             site_nearbyA[[g]] = site_nearbyA[[g]] / 51089.73 * 1000
+    #             next
+    #         }
+    #
+    #         nwissite = dataRetrieval::readNWISsite(g)
+    #
+    #         if(is.null(nwissite)) stop('NWIS watershed area not listed for ', g)
+    #
+    #         if(is.na(nwissite$contrib_drain_area_va)){
+    #             wsa = nwissite$drain_area_va * 258.999 #mi^2 -> ha
+    #         } else {
+    #             wsa = nwissite$contrib_drain_area_va * 258.999 #mi^2 -> ha
+    #         }
+    #
+    #         if(is.na(wsa)) stop('NWIS watershed area not listed for ', g)
+    #
+    #         site_nearbyA[[g]] = site_nearbyA[[g]] / wsa * 1000
+    #     }
+    # }
+    #
+    # site_nearbyA = site_nearbyA %>%
+    #     mutate(across(matches('^[0-9]+$'), ~ . * 28.3168)) %>% #cfs -> L/s
+    #     mutate(across(matches('^[0-9]+$'),
+    #                   neglog,
+    #                   # ~boxcox_write(., !!site_code, write = FALSE),
+    #                   .names = '{.col}_log')) %>%
+    #     arrange(datetime)
+    # # }
+    #
+    # if(! is.null(ms_Q_data)){
+    #
+    #     ms_sites = grep('datetime', colnames(ms_Q_data), invert = TRUE, value = TRUE)
+    #
+    #     if(scale_q_by_area){
+    #
+    #         for(g in ms_sites){
+    #
+    #             wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
+    #             ms_Q_data[[g]] = ms_Q_data[[g]] / wsa * 1000
+    #         }
+    #     }
+    #
+    #     ms_Q_data = ms_Q_data %>%
+    #         mutate(across(-datetime, neglog, .names = '{.col}_log'))
+    # }
+    #
+    # if(! is.null(site_nearbyA) && ! is.null(ms_Q_data)){
+    #     site_nearby = full_join(site_nearbyA, ms_Q_data, by = c('datetime'))
+    # } else if(! is.null(site_nearbyA)){
+    #     site_nearby = site_nearbyA
+    # } else  {
+    #     site_nearby = ms_Q_data
+    # }
 
-            if(! nrow(usgsq)) stop('no instantaneous Q?')
+    site_nearby <- read_csv(glue('in/usgs_Q/{site_code}.csv'))
+    warning('OI!!')
+    # write_csv(site_nearby, glue('in/usgs_Q/{site_code}.csv'))
 
-            # if(any(! usgsq$X_00060_00000_cd %in% c('A', 'P', 'A e', 'A R'))) stop()
-            if(any(grepl('>', usgsq$X_00060_00000_cd))) warning(glue('">" detected in {site_code} donor Q'))
-            if(any(grepl('<', usgsq$X_00060_00000_cd))) warning(glue('"<" detected in {site_code} donor Q'))
-            if(any(usgsq$tz_cd != 'UTC')) stop('non-UTC datetime encountered')
-
-            site_nearbyA = usgsq %>%
-                as_tibble() %>%
-                select(site_no, datetime = dateTime, discharge = X_00060_00000) %>%
-                pivot_wider(names_from = site_no, values_from = discharge)
-
-            browser()
-            site_nearbyA <- cull_gauges(site_nearbyA)
-
-            if(scale_q_by_area){
-
-                for(g in nearby_usgs_gages){
-
-                    if(g == '06190540'){
-                        #for NEON runthrough, this was the only site without
-                        #a watershed area included in dataRetrieval. unlikely
-                        #to be encountered again?
-                        site_nearbyA[[g]] = site_nearbyA[[g]] / 51089.73 * 1000
-                        next
-                    }
-
-                    nwissite = dataRetrieval::readNWISsite(g)
-
-                    if(is.null(nwissite)) stop('cannot find nwis watershed area')
-
-                    if(is.na(nwissite$contrib_drain_area_va)){
-                        wsa = nwissite$drain_area_va * 258.999 #mi^2 -> ha
-                    } else {
-                        wsa = nwissite$contrib_drain_area_va * 258.999 #mi^2 -> ha
-                    }
-
-                    if(is.na(wsa)) stop(paste('need to look up area for', g))
-
-                    site_nearbyA[[g]] = site_nearbyA[[g]] / wsa * 1000
-                }
-            }
-
-            site_nearbyA = site_nearbyA %>%
-                mutate(across(matches('^[0-9]+$'), ~ . * 28.3168)) %>%
-                mutate(across(matches('^[0-9]+$'),
-                              neglog,
-                              # ~boxcox_write(., !!site_code, write = FALSE),
-                              .names = '{.col}_log')) %>%
-                arrange(datetime)
-        }
-
-        if(! is.null(ms_Q_data)){
-
-            ms_sites = grep('datetime', colnames(ms_Q_data), invert = TRUE, value = TRUE)
-
-            if(scale_q_by_area){
-
-                for(g in ms_sites){
-
-                    wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
-                    ms_Q_data[[g]] = ms_Q_data[[g]] / wsa * 1000
-                }
-            }
-
-            ms_Q_data = ms_Q_data %>%
-                mutate(across(-datetime, neglog, .names = '{.col}_log'))
-        }
-
-        if(! is.null(site_nearbyA) && ! is.null(ms_Q_data)){
-            site_nearby = full_join(site_nearbyA, ms_Q_data, by = c('datetime'))
-        } else if(! is.null(site_nearbyA)){
-            site_nearby = site_nearbyA
-        } else  {
-            site_nearby = ms_Q_data
-        }
-
-        write_csv(site_nearby, glue('in/usgs_Q/{site_code}.csv'))
-
-    } else {
-        site_nearby = read_csv(glue('in/usgs_Q/{site_code}.csv'))
-    }
+    #
+    # } else {
+    #    site_nearby = read_csv(glue('in/usgs_Q/{site_code}.csv'))
+    # # }
+    #
+    #     warning('uncomment hard-code file read in assemble_q_df!!')
 
     #rolling join usgs data to field measurements by datetime
-
     x = rename(field_q, datetime_x = datetime) %>% as.data.table()
     y = rename(site_nearby, datetime_y = datetime) %>% as.data.table()
 
@@ -379,18 +395,31 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
     #alpha: 0 = ridge; 1 = lasso; see ?glmnet
     #...: additional arguments passed to glmnet AND cv.glmnet
 
-    ## run regression with 10-fold crossval
-
-    x <- model.matrix(full_spec, data = data)
+    # prepare data
+    x <- try(model.matrix(full_spec, data = data), silent = TRUE)
+    if(inherits(x, 'try-error')){
+        if(grepl('or more levels', attr(x, 'condition')$message)){
+            message('Only one season represented in the field data. Removing seasonal term.')
+            full_spec <- update(full_spec, . ~ . - season - .:season)
+            x <- model.matrix(full_spec, data = data)
+        } else stop(x)
+    }
     mod_inds <- complete.cases(data)
     y <- data$discharge_log[mod_inds]
     data_filt <- data[mod_inds, ]
 
     ## get cross-validated predictions and metrics
 
+    nobs <- length(y)
+    if(nobs < k_folds){
+        message('k_folds is ', k_folds, ', but there are only ', nobs,
+                ' observations. Setting k_folds to ', nobs, ' (LOOCV).')
+        k_folds <- min(nobs, k_folds)
+    }
+
     best_mse <- Inf
     site_code <- data$site_code[1]
-    wsa <- filter(ms_areas, site_code == site_code) %>% pull(ws_area_ha)
+    wsa <- filter(sites, site_code == !!site_code) %>% pull(ws_area_ha)
     for(i in 0:1){
 
         n_samp <- length(y)
@@ -400,7 +429,7 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
         lambda_vec <- rep(NA_real_, cv_ensemble)
         for(j in 1:cv_ensemble){
 
-            cv_model_ <- cv.glmnet(x, y, alpha = alpha, n_folds = k_folds, #foldid = fold_ids
+            cv_model_ <- cv.glmnet(x, y, alpha = alpha, nfolds = k_folds,
                                    intercept = as.logical(i), type.measure = 'mse', ...)
             lambda_vec[j] <- cv_model_$lambda.min
             cvpred <- c(predict(cv_model_, s = 'lambda.min', newx = x))
@@ -499,7 +528,8 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
     drop_cols <- grep('^[0-9]', colnames(plot_data), value = TRUE)
     drop_cols <- drop_cols[! drop_cols %in% site_indeps]
     plot_data <- select(plot_data, -any_of(drop_cols), -ends_with('_log')) %>%
-        select(site_code, any_of(c('date', 'datetime')), Q_neon_field = discharge, Q_predicted = lm,
+        select(site_code, any_of(c('date', 'datetime')),
+               Q_field = discharge, Q_predicted = lm,
                everything())
 
     ## unscale usgs Q
@@ -529,14 +559,13 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
 
         nearby_ms_gages <- select(plot_data,
                                   -site_code,
-                                  -any_of(c('date', 'datetime')),
+                                  -any_of(c('date', 'datetime', 'season')),
                                   -starts_with('Q_'),
-                                  -season,
                                   -any_of(nearby_usgs_gages)) %>%
             colnames()
 
         for(g in nearby_ms_gages){
-            wsa <- filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
+            wsa <- filter(sites, site_code == !!g) %>% pull(ws_area_ha)
             plot_data[[g]] <- plot_data[[g]] * wsa / 1000
         }
     }
@@ -566,14 +595,31 @@ bootstrap_ci_glmnet <- function(ncores, in_df, frm, best, has_intcpt, newx_){
     clst <- makeCluster(spec = ncores, type = clst_type)
     registerDoParallel(clst)
 
+    on.exit(stopCluster(clst))
+    browser()
+
     bootstrap_samps <- parallel::parSapply(clst, 1:1000, function(x){
 
-        resamp <- stratified_resample(in_df, 'season')
+        if('season' %in% rownames(attributes(terms(frm))$factors)){
+            resamp <- stratified_resample(in_df, 'season')
+        } else {
+            resamp <- in_df[sample(seq_len(nrow(in_df)), replace = TRUE), ]
+        }
+
         x <- model.matrix(frm, data = resamp)
         mod_inds <- complete.cases(resamp)
         y <- resamp$discharge_log[mod_inds]
 
-        s <- cv.glmnet(x, y, alpha = best$alpha, intercept = has_intcpt)$lambda.min
+        s <- try(cv.glmnet(x, y, alpha = best$alpha, intercept = has_intcpt)$lambda.min,
+                 silent = TRUE)
+
+        if(inherits(s, 'try-error')){
+            warning('Not enough y-variation to perform cross-validation')
+            # stopCluster(clst)
+            HERE
+            return(list(ci_lwr = ci[1, ], ci_upr = ci[2, ]))
+        }
+
         m <- glmnet(x, y, alpha = best$alpha, intercept = has_intcpt, lambda = s)
 
         predict(m, s = s, newx = model.matrix(update(frm, NULL ~ .), newx_))
@@ -588,7 +634,7 @@ bootstrap_ci_glmnet <- function(ncores, in_df, frm, best, has_intcpt, newx_){
     #     clst, quant975, ..., SIMPLIFY = TRUE, USE.NAMES = FALSE), ...),
     #     bootstrap_samps)
 
-    stopCluster(clst)
+    # stopCluster(clst)
 
     return(list(ci_lwr = ci[1, ], ci_upr = ci[2, ]))
 }
@@ -839,7 +885,8 @@ lm_wrap <- function(data, model_list,
     drop_cols = grep('^[0-9]', colnames(plot_data), value = TRUE)
     drop_cols = drop_cols[! drop_cols %in% site_indeps]
     plot_data = select(plot_data, -any_of(drop_cols), -ends_with('_log')) %>%
-        select(site_code, any_of(c('date', 'datetime')), Q_neon_field = discharge, Q_predicted = lm,
+        select(site_code, any_of(c('date', 'datetime')),
+               Q_field = discharge, Q_predicted = lm,
                everything())
 
     if(unscale_q_by_area){
@@ -870,7 +917,7 @@ lm_wrap <- function(data, model_list,
             colnames()
 
         for(g in nearby_ms_gages){
-            wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
+            wsa = filter(sites, site_code == !!g) %>% pull(ws_area_ha)
             plot_data[[g]] = plot_data[[g]] * wsa / 1000
         }
     }
@@ -915,7 +962,7 @@ segmented_wrap <- function(data, model_list,
 
             site_code <- data$site_code[1]
             if(unscale_q_by_area){
-                wsa <- filter(ms_areas, site_code == site_code) %>% pull(ws_area_ha)
+                wsa <- filter(sites, site_code == !!site_code) %>% pull(ws_area_ha)
                 sim <- inv_neglog(dd$cvpred) * wsa / 1000
             } else {
                 sim <- inv_neglog(dd$cvpred)
@@ -1009,7 +1056,8 @@ segmented_wrap <- function(data, model_list,
     drop_cols = grep('^[0-9]', colnames(plot_data), value = TRUE)
     drop_cols = drop_cols[! drop_cols %in% site_indeps]
     plot_data = select(plot_data, -any_of(drop_cols), -ends_with('_log')) %>%
-        select(site_code, any_of(c('date', 'datetime')), Q_neon_field = discharge, Q_predicted = lm,
+        select(site_code, any_of(c('date', 'datetime')),
+               Q_field = discharge, Q_predicted = lm,
                everything())
 
     if(unscale_q_by_area){
@@ -1040,7 +1088,7 @@ segmented_wrap <- function(data, model_list,
             colnames()
 
         for(g in nearby_ms_gages){
-            wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
+            wsa = filter(sites, site_code == !!g) %>% pull(ws_area_ha)
             plot_data[[g]] = plot_data[[g]] * wsa / 1000
         }
     }
@@ -1112,6 +1160,9 @@ regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
     }
 
     if(is.null(custom_gauges)){
+        if(! site_code %in% names(donor_gauges)){
+            stop(site_code, ' entry missing from cfg/donor_gauges.yml')
+        }
         gage_ids <- donor_gauges[[site_code]]
     } else {
         gage_ids <- custom_gauges
@@ -1226,34 +1277,17 @@ plots_and_results <- function(site_code, best, results, in_df,
         sites_nearby$season = factor(lubridate::quarter(sites_nearby$datetime))
     }
 
-    #assemble neon sensor data, filtered neon sensor data, neon field data
-    #into one frame and plot it
-
-    neon_q_auto = read_csv(glue('in/neon_continuous_Q/{site_code}.csv')) %>%
-        filter(! is.na(discharge)) %>%
-        rename(discharge_auto = discharge)
-
-    # q_eval = read_csv('in/neon_q_eval.csv') %>%
-    #     filter(site == site_code)
+    # #assemble neon sensor data, filtered neon sensor data, neon field data
+    # #into one frame and plot it
     #
-    # q_eval = q_eval %>%
-    #     group_by(site, year, month) %>%
-    #     summarize(keep = all(final_qual %in% c('Tier1', 'Tier2')), #if issues occur at any point in a month, reject that whole month
-    #               .groups = 'drop')
+    # neon_q_auto = read_csv(glue('in/neon_continuous_Q/{site_code}.csv')) %>%
+    #     filter(! is.na(discharge)) %>%
+    #     rename(discharge_auto = discharge)
     #
-    # neon_q_auto_qc = neon_q_auto %>%
-    #     mutate(year = year(datetime),
-    #            month = month(datetime)) %>%
-    #     left_join(select(q_eval, year, month, keep),
-    #               by = c('year', 'month')) %>%
-    #     filter(keep) %>%
-    #     select(-keep, -year, -month) %>%
-    #     rename(discharge_auto_qc = discharge_auto)
-
-    #predict Q for all datetimes with predictor data
-
-    qall = left_join(sites_nearby, neon_q_auto, by = 'datetime')
-        # left_join(select(neon_q_auto_qc, -site_code), by = 'datetime')
+    # #predict Q for all datetimes with predictor data
+    #
+    # qall = left_join(sites_nearby, neon_q_auto, by = 'datetime')
+    qall = sites_nearby
 
     if(dummy_present){
         qall$dummy <- 0
@@ -1282,9 +1316,12 @@ plots_and_results <- function(site_code, best, results, in_df,
         seasons_present <- c(seasons_present,
                              min(as.numeric(seasons_present)) - 1)
 
-        newx_ <- select(qall, all_of(site_indeps_log), any_of('season')) %>%
-            mutate(season = ifelse(! season %in% seasons_present, NA, season),
-                   season = as.factor(season))
+        newx_ <- select(qall, all_of(site_indeps_log), any_of('season'))
+        if('season' %in% colnames(qall)){
+            newx_ <- newx_ %>%
+                mutate(season = ifelse(! season %in% seasons_present, NA, season),
+                       season = as.factor(season))
+        }
         valid_obs <- complete.cases(newx_)
         frm <- best$best_model_ignoreint
         has_intcpt <- '(Intercept)' %in% betas
@@ -1325,17 +1362,17 @@ plots_and_results <- function(site_code, best, results, in_df,
     }
 
     if(unscale_q_by_area){
-        wsa = filter(ms_areas, site_code == site_code) %>% pull(ws_area_ha)
+        wsa = filter(sites, site_code == !!site_code) %>% pull(ws_area_ha)
         qall = mutate(qall, fit = fit * wsa / 1000, lwr = lwr * wsa / 1000, upr = upr * wsa / 1000)
     }
 
     out_data = qall %>%
         select(-ends_with('_log'), -any_of('season')) %>%
-        full_join(select(best$lm_data, datetime, Q_neon_field), by = 'datetime') %>%
+        full_join(select(best$lm_data, datetime, Q_field), by = 'datetime') %>%
         select(datetime, Q_predicted = fit, #Q_used_in_regression = discharge,
-               Q_pred_int_2.5 = lwr, Q_pred_int_97.5 = upr, Q_neon_field,
+               Q_pred_int_2.5 = lwr, Q_pred_int_97.5 = upr, Q_field) %>%
                # Q_neon_continuous_filtered = discharge_auto_qc,
-               Q_neon_continuous = discharge_auto) %>%
+               #Q_neon_continuous = discharge_auto) %>%
         filter(if_any(-datetime, ~cumsum(! is.na(.)) != 0)) %>%  #remove leading NA rows
         arrange(datetime)
 
@@ -1380,7 +1417,7 @@ plots_and_results <- function(site_code, best, results, in_df,
     zz = out_data %>%
         mutate(datetime = round_date(datetime, paste(time_interval, 'min')))
 
-    field_dts = filter(zz, ! is.na(Q_neon_field)) %>% pull(datetime)
+    field_dts = filter(zz, ! is.na(Q_field)) %>% pull(datetime)
 
     zz = zz %>%
         filter(datetime %in% field_dts) %>%
@@ -1388,11 +1425,11 @@ plots_and_results <- function(site_code, best, results, in_df,
         summarize(across(everything(), ~mean(., na.rm = TRUE))) %>%
         ungroup()
 
-    axlim = c(0, max(c(zz$Q_predicted, zz$Q_neon_field), na.rm = TRUE))
+    axlim = c(0, max(c(zz$Q_predicted, zz$Q_field), na.rm = TRUE))
 
     asterisk <- if(inherits(best$best_model_object, 'segmented')) '*' else ''
     png(glue('figs/lm_plots/val/{site_code}_obs_v_pred.png'), 6, 6, 'in', type = 'cairo', res = 300)
-    plot(zz$Q_neon_field, zz$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
+    plot(zz$Q_field, zz$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
          ylab = 'Predicted Discharge (L/s)',
          main = glue('Site: {site_code}; KGE: {kge1}; KGE crossval{a}: {kge2}',
                      kge1 = round(best$metrics$kge, 2),
@@ -1403,7 +1440,7 @@ plots_and_results <- function(site_code, best, results, in_df,
     legend('topleft', legend = '1:1', lty = 1, col = 'blue', bty = 'n')
     dev.off()
 
-    out_data = filter(out_data, ! is.na(Q_predicted)) %>% select(-Q_neon_field)
+    out_data = filter(out_data, ! is.na(Q_predicted)) %>% select(-Q_field)
 
     #save predictions as CSV
     out_data = left_join(out_data,
@@ -1626,15 +1663,15 @@ plots_and_results_daily_composite <- function(site_code, best1, best2, results,
     qall = bind_cols(qall, pred)
 
     if(unscale_q_by_area){
-        wsa = filter(ms_areas, site_code == site_code) %>% pull(ws_area_ha)
+        wsa = filter(sites, site_code == !!site_code) %>% pull(ws_area_ha)
         qall = mutate(qall, fit = fit * wsa / 1000, lwr = lwr * wsa / 1000, upr = upr * wsa / 1000)
     }
 
     out_data = qall %>%
         select(-ends_with('_log'), -any_of('season')) %>%
-        full_join(select(best2$lm_data, date, Q_neon_field), by = 'date') %>%
+        full_join(select(best2$lm_data, date, Q_field), by = 'date') %>%
         select(date, Q_predicted = fit,
-               Q_pred_int_2.5 = lwr, Q_pred_int_97.5 = upr, Q_neon_field,
+               Q_pred_int_2.5 = lwr, Q_pred_int_97.5 = upr, Q_field,
                # Q_neon_continuous_filtered = discharge_daily_qc,
                Q_neon_continuous = discharge_daily) %>%
         filter(if_any(-date, ~cumsum(! is.na(.)) != 0)) %>%  #remove leading NA rows
@@ -1685,13 +1722,13 @@ plots_and_results_daily_composite <- function(site_code, best1, best2, results,
     dev.off()
 
     #plot predictions versus field measurements. need to round field meas to Q interval
-    nse = hydroGOF::NSE(out_data$Q_predicted, out_data$Q_neon_field)
-    kge = hydroGOF::KGE(out_data$Q_predicted, out_data$Q_neon_field)
-    pbias = hydroGOF::pbias(out_data$Q_predicted, out_data$Q_neon_field)
-    axlim = c(0, max(c(out_data$Q_predicted, out_data$Q_neon_field), na.rm = TRUE))
+    nse = hydroGOF::NSE(out_data$Q_predicted, out_data$Q_field)
+    kge = hydroGOF::KGE(out_data$Q_predicted, out_data$Q_field)
+    pbias = hydroGOF::pbias(out_data$Q_predicted, out_data$Q_field)
+    axlim = c(0, max(c(out_data$Q_predicted, out_data$Q_field), na.rm = TRUE))
 
     png(glue('figs/lm_plots/val/{site_code}_obs_v_pred.png'), 6, 6, 'in', type = 'cairo', res = 300)
-    plot(out_data$Q_neon_field, out_data$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
+    plot(out_data$Q_field, out_data$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
          ylab = 'Predicted Discharge (L/s)',
          main = glue('Site: {site_code}; KGE: {kge1}; KGE crossval*: {kge2}',
                      kge1 = round(kge, 2),
@@ -1702,7 +1739,7 @@ plots_and_results_daily_composite <- function(site_code, best1, best2, results,
     dev.off()
 
     #save predictions as CSV
-    out_data = filter(out_data, is.na(Q_neon_field)) %>% select(-Q_neon_field)
+    out_data = filter(out_data, is.na(Q_field)) %>% select(-Q_field)
     out_data = left_join(out_data,
                          select(sites_nearby, date, all_of(site_indeps2), any_of('season')),
                          by = 'date')
@@ -2031,12 +2068,12 @@ ts_plot <- function(site, yr, boldgray = FALSE, ymax = Inf, scaled = TRUE, borde
         pred <- read_csv(paste0('out/lm_out_specQ/predictions/', site, '.csv')) %>%
             select(datetime, starts_with('Q_pred'))
         fit <- read_csv(paste0('out/lm_out_specQ/fit/', site, '.csv')) %>%
-            select(datetime, Q_neon_field)
+            select(datetime, Q_field)
     } else {
         pred <- read_csv(paste0('out/lm_out/predictions/', site, '.csv')) %>%
             select(datetime, starts_with('Q_pred'))
         fit <- read_csv(paste0('out/lm_out/fit/', site, '.csv')) %>%
-            select(datetime, Q_neon_field)
+            select(datetime, Q_field)
     }
 
     withf <- read_csv(glue('in/neon_continuous_Q_withflags/{site}.csv'))
@@ -2053,7 +2090,7 @@ ts_plot <- function(site, yr, boldgray = FALSE, ymax = Inf, scaled = TRUE, borde
         filter(is.na(qwo) & ! is.na(qwith)) %>%
         pull(datetime)
 
-    ymax_ <- max(c(plotd$qwith, plotd$Q_pred_int_97.5, plotd$Q_neon_field), na.rm = TRUE)
+    ymax_ <- max(c(plotd$qwith, plotd$Q_pred_int_97.5, plotd$Q_field), na.rm = TRUE)
     rle_ <- rle2(as.numeric(month(plotd$datetime)))
 
     if(nrow(rle_) < 12){
@@ -2075,7 +2112,7 @@ ts_plot <- function(site, yr, boldgray = FALSE, ymax = Inf, scaled = TRUE, borde
     }
     lines(plotd$datetime, plotd$Q_predicted, col = 'red')
     points(flagdts, rep(ylm[2] * -0.03, length(flagdts)), pch = 39, col = 'black')
-    points(plotd$datetime, plotd$Q_neon_field, col = 'black', pch = 1)
+    points(plotd$datetime, plotd$Q_field, col = 'black', pch = 1)
     mtext(site, 3, -1, adj = 0.01, padj = 0.1)
 }
 

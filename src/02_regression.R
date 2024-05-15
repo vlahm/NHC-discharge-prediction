@@ -4,16 +4,16 @@
 # last edit: 2025-05-13
 
 library(dataRetrieval)
-# library(data.table)
-# library(lubridate)
+library(data.table)
+library(lubridate)
 library(glue)
-# library(dygraphs)
-# library(xts)
+library(dygraphs)
+library(xts)
 library(hydroGOF)
-# library(ggplot2)
-# library(gridExtra)
+library(ggplot2)
+library(gridExtra)
 # library(neonUtilities)
-# library(htmlwidgets)
+library(htmlwidgets)
 # library(DAAG)
 library(glmnet)
 # library(segmented)
@@ -48,9 +48,11 @@ results <- tibble(
 #script at once, rather than going through line by line, you should be okay.
 #you can also grep 00_helpers.R for clst_type and hard-code it to "PSOCK"
 
-# regress(site_code = 'NHC', framework = 'lm')
-regress(site_code = 'NHC', framework = 'glmnet',
+regress(site_code = 'erwin', framework = 'glmnet',
         target_daterange = c('2023-01-01', '2023-12-31'))
+# 'discharge_log ~ `{paste0(donor_gauges[["LECO"]], "_log")}`'
+
+# regress(site_code = 'NHC', framework = 'lm')
 # regress(site_code = 'NHC', framework = 'glmnet', bootstrap_ci = FALSE)
 # regress(site_code = 'NHC', framework = 'glmnet', ncores = 11)
 
