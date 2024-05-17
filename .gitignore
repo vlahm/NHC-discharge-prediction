@@ -9,3 +9,4 @@ log/
 cfg/google_auth.cfg
 *.zip
 *.swp
+junk/

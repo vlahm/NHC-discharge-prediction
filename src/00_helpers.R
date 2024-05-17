@@ -118,93 +118,93 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
     site_nearbyA = NULL
     # if(! is.null(nearby_usgs_gages)){
 
-    # usgsq = dataRetrieval::readNWISdata(
-    #     sites = nearby_usgs_gages,
-    #     service = 'iv', #instantaneous values
-    #     parameterCd = '00060', #discharge (cfs)
-    #     startDate = target_daterange[1],
-    #     endDate = target_daterange[2]
-    # )
-    #
-    # if(! nrow(usgsq)) stop('no instantaneous Q?')
-    #
-    # # if(any(! usgsq$X_00060_00000_cd %in% c('A', 'P', 'A e', 'A R'))) stop()
-    # if(any(grepl('>', usgsq$X_00060_00000_cd))) warning(glue('">" detected in {site_code} donor Q'))
-    # if(any(grepl('<', usgsq$X_00060_00000_cd))) warning(glue('"<" detected in {site_code} donor Q'))
-    # if(any(usgsq$tz_cd != 'UTC')) stop('non-UTC datetime encountered')
-    #
-    # site_nearbyA = usgsq %>%
-    #     as_tibble() %>%
-    #     select(site_no, datetime = dateTime, discharge = X_00060_00000) %>%
-    #     pivot_wider(names_from = site_no, values_from = discharge)
-    #
-    # site_nearbyA <- cull_gauges(site_nearbyA)
-    #
-    # if(scale_q_by_area){
-    #
-    #     for(g in nearby_usgs_gages){
-    #
-    #         if(g == '06190540'){
-    #             #for NEON runthrough, this was the only site without
-    #             #a watershed area included in dataRetrieval. unlikely
-    #             #to be encountered again?
-    #             site_nearbyA[[g]] = site_nearbyA[[g]] / 51089.73 * 1000
-    #             next
-    #         }
-    #
-    #         nwissite = dataRetrieval::readNWISsite(g)
-    #
-    #         if(is.null(nwissite)) stop('NWIS watershed area not listed for ', g)
-    #
-    #         if(is.na(nwissite$contrib_drain_area_va)){
-    #             wsa = nwissite$drain_area_va * 258.999 #mi^2 -> ha
-    #         } else {
-    #             wsa = nwissite$contrib_drain_area_va * 258.999 #mi^2 -> ha
-    #         }
-    #
-    #         if(is.na(wsa)) stop('NWIS watershed area not listed for ', g)
-    #
-    #         site_nearbyA[[g]] = site_nearbyA[[g]] / wsa * 1000
-    #     }
-    # }
-    #
-    # site_nearbyA = site_nearbyA %>%
-    #     mutate(across(matches('^[0-9]+$'), ~ . * 28.3168)) %>% #cfs -> L/s
-    #     mutate(across(matches('^[0-9]+$'),
-    #                   neglog,
-    #                   # ~boxcox_write(., !!site_code, write = FALSE),
-    #                   .names = '{.col}_log')) %>%
-    #     arrange(datetime)
-    # # }
-    #
-    # if(! is.null(ms_Q_data)){
-    #
-    #     ms_sites = grep('datetime', colnames(ms_Q_data), invert = TRUE, value = TRUE)
-    #
-    #     if(scale_q_by_area){
-    #
-    #         for(g in ms_sites){
-    #
-    #             wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
-    #             ms_Q_data[[g]] = ms_Q_data[[g]] / wsa * 1000
-    #         }
-    #     }
-    #
-    #     ms_Q_data = ms_Q_data %>%
-    #         mutate(across(-datetime, neglog, .names = '{.col}_log'))
-    # }
-    #
-    # if(! is.null(site_nearbyA) && ! is.null(ms_Q_data)){
-    #     site_nearby = full_join(site_nearbyA, ms_Q_data, by = c('datetime'))
-    # } else if(! is.null(site_nearbyA)){
-    #     site_nearby = site_nearbyA
-    # } else  {
-    #     site_nearby = ms_Q_data
+    usgsq = dataRetrieval::readNWISdata(
+        sites = nearby_usgs_gages,
+        service = 'iv', #instantaneous values
+        parameterCd = '00060', #discharge (cfs)
+        startDate = target_daterange[1],
+        endDate = target_daterange[2]
+    )
+
+    if(! nrow(usgsq)) stop('no instantaneous Q?')
+
+    # if(any(! usgsq$X_00060_00000_cd %in% c('A', 'P', 'A e', 'A R'))) stop()
+    if(any(grepl('>', usgsq$X_00060_00000_cd))) warning(glue('">" detected in {site_code} donor Q'))
+    if(any(grepl('<', usgsq$X_00060_00000_cd))) warning(glue('"<" detected in {site_code} donor Q'))
+    if(any(usgsq$tz_cd != 'UTC')) stop('non-UTC datetime encountered')
+
+    site_nearbyA = usgsq %>%
+        as_tibble() %>%
+        select(site_no, datetime = dateTime, discharge = X_00060_00000) %>%
+        pivot_wider(names_from = site_no, values_from = discharge)
+
+    site_nearbyA <- cull_gauges(site_nearbyA)
+
+    if(scale_q_by_area){
+
+        for(g in nearby_usgs_gages){
+
+            if(g == '06190540'){
+                #for NEON runthrough, this was the only site without
+                #a watershed area included in dataRetrieval. unlikely
+                #to be encountered again?
+                site_nearbyA[[g]] = site_nearbyA[[g]] / 51089.73 * 1000
+                next
+            }
+
+            nwissite = dataRetrieval::readNWISsite(g)
+
+            if(is.null(nwissite)) stop('NWIS watershed area not listed for ', g)
+
+            if(is.na(nwissite$contrib_drain_area_va)){
+                wsa = nwissite$drain_area_va * 258.999 #mi^2 -> ha
+            } else {
+                wsa = nwissite$contrib_drain_area_va * 258.999 #mi^2 -> ha
+            }
+
+            if(is.na(wsa)) stop('NWIS watershed area not listed for ', g)
+
+            site_nearbyA[[g]] = site_nearbyA[[g]] / wsa * 1000
+        }
+    }
+
+    site_nearbyA = site_nearbyA %>%
+        mutate(across(matches('^[0-9]+$'), ~ . * 28.3168)) %>% #cfs -> L/s
+        mutate(across(matches('^[0-9]+$'),
+                      neglog,
+                      # ~boxcox_write(., !!site_code, write = FALSE),
+                      .names = '{.col}_log')) %>%
+        arrange(datetime)
     # }
 
-    site_nearby <- read_csv(glue('in/usgs_Q/{site_code}.csv'))
-    warning('OI!!')
-    # write_csv(site_nearby, glue('in/usgs_Q/{site_code}.csv'))
+    if(! is.null(ms_Q_data)){
+
+        ms_sites = grep('datetime', colnames(ms_Q_data), invert = TRUE, value = TRUE)
+
+        if(scale_q_by_area){
+
+            for(g in ms_sites){
+
+                wsa = filter(ms_areas, site_code == g) %>% pull(ws_area_ha)
+                ms_Q_data[[g]] = ms_Q_data[[g]] / wsa * 1000
+            }
+        }
+
+        ms_Q_data = ms_Q_data %>%
+            mutate(across(-datetime, neglog, .names = '{.col}_log'))
+    }
+
+    if(! is.null(site_nearbyA) && ! is.null(ms_Q_data)){
+        site_nearby = full_join(site_nearbyA, ms_Q_data, by = c('datetime'))
+    } else if(! is.null(site_nearbyA)){
+        site_nearby = site_nearbyA
+    } else  {
+        site_nearby = ms_Q_data
+    }
+
+    # site_nearby <- read_csv(glue('in/usgs_Q/{site_code}.csv'))
+    # warning('OI!!')
+    write_csv(site_nearby, glue('in/usgs_Q/{site_code}.csv'))
 
     #
     # } else {
@@ -324,60 +324,53 @@ cull_gauges <- function(d){
         recording_intervals_m <- c(recording_intervals_m, Mode(diff(as.numeric(dtcol)) / 60))
     }
 
-    if(length(unique(recording_intervals_m)) != 1){
-
-        # if(all(recording_intervals_m != 15)){
-        #     warning('the typical recording interval for USGS discharge is 15 minutes, but ',
-        #             'all of the gauges provided record in an interval other than 15m. Not sure ',
-        #             'how this will handle. Proceed with caution.')
-        # }
-
-        weird_ints <- ! recording_intervals_m %in% c(5, 15, 30, 60)
-        if(any(weird_ints)){
-            warning('gauge recording intervals of 5, 15, 30, and 60 minutes are ',
-                    'expected, but interval(s) of ',
-                    paste(unique(recording_intervals_m[weird_ints]),
-                          collapse = ', '),
-                    ' was/were encountered. Probably nbd.')
-        }
-
-        max_intvl <- max(recording_intervals_m)
-
-        highres_col_ind <- which(recording_intervals_m < max_intvl) + 1
-        highres_cols <- colnames(d)[highres_col_ind]
-
-        cat(
-            'Recording intervals (minutes) by gauge:\n\t',
-            paste0(paste0(str_pad(paste0(colnames(d)[-1], ': '),
-                                  width = '12',
-                                  side = 'right')),
-                   paste0(recording_intervals_m, '\n\t'))
-        )
-
-        nrow0 <- nrow(d)
-        d <- filter(d, ! if_all(-all_of(c('datetime', highres_cols)), is.na))
-
-        message('Coercing all discharge series to the coarsest recording interval (',
-                max_intvl, ' mins). Dropping ', nrow0 - nrow(d), ' rows.')
-
-        nas_by_gauge <- apply(d[, -1], 2, function(x) sum(is.na(x)))
-        na_pcts_by_gauge <- apply(d[, -1], 2, function(x) round(sum(is.na(x)) / length(x), 2))
-        na_pcts_by_gauge <- sub('^0$', '~0', na_pcts_by_gauge)
-
-        cat(
-            'Missing values by gauge (any timestep with a missing value cannot be predicted):\n\t',
-            paste0(str_pad(paste0(names(nas_by_gauge), ': '),
-                           width = '12',
-                           side = 'right'),
-                   str_pad(paste0(unname(nas_by_gauge)),
-                           width = '6',
-                           side = 'right'),
-                   paste0(' (', unname(na_pcts_by_gauge), '%)\n\t'),
-                   collapse = ' ')
-        )
-
-        return(d)
+    weird_ints <- ! recording_intervals_m %in% c(5, 15, 30, 60)
+    if(any(weird_ints)){
+        warning('gauge recording intervals of 5, 15, 30, and 60 minutes are ',
+                'expected, but interval(s) of ',
+                paste(unique(recording_intervals_m[weird_ints]),
+                      collapse = ', '),
+                ' was/were encountered. Probably nbd.')
     }
+
+    max_intvl <- max(recording_intervals_m)
+
+    highres_col_ind <- which(recording_intervals_m < max_intvl) + 1
+    highres_cols <- colnames(d)[highres_col_ind]
+
+    cat(
+        'Recording intervals (minutes) by gauge:\n\t',
+        paste0(paste0(str_pad(paste0(colnames(d)[-1], ': '),
+                              width = '12',
+                              side = 'right')),
+               paste0(recording_intervals_m, '\n\t'))
+    )
+
+    nrow0 <- nrow(d)
+    d <- filter(d, ! if_all(-all_of(c('datetime', highres_cols)), is.na))
+
+    if(any(recording_intervals_m != max_intvl)){
+        message('Coercing all donor gauge series to the coarsest recording interval (',
+                max_intvl, ' mins). Dropping ', nrow0 - nrow(d), ' rows.')
+    }
+
+    nas_by_gauge <- apply(d[, -1], 2, function(x) sum(is.na(x)))
+    na_pcts_by_gauge <- apply(d[, -1], 2, function(x) round(sum(is.na(x)) / length(x), 2))
+    na_pcts_by_gauge <- sub('^0$', '~0', na_pcts_by_gauge)
+
+    cat(
+        'Missing values by gauge (any timestep with a missing value cannot be predicted):\n\t',
+        paste0(str_pad(paste0(names(nas_by_gauge), ': '),
+                       width = '12',
+                       side = 'right'),
+               str_pad(paste0(unname(nas_by_gauge)),
+                       width = '6',
+                       side = 'right'),
+               paste0(' (', unname(na_pcts_by_gauge), '%)\n\t'),
+               collapse = ' ')
+    )
+
+    return(d)
 }
 
 # regression ####
@@ -417,6 +410,8 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
         k_folds <- min(nobs, k_folds)
     }
 
+    is_grpd <- ifelse(nobs / k_folds < 3, FALSE, TRUE)
+
     best_mse <- Inf
     site_code <- data$site_code[1]
     wsa <- filter(sites, site_code == !!site_code) %>% pull(ws_area_ha)
@@ -429,7 +424,7 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
         lambda_vec <- rep(NA_real_, cv_ensemble)
         for(j in 1:cv_ensemble){
 
-            cv_model_ <- cv.glmnet(x, y, alpha = alpha, nfolds = k_folds,
+            cv_model_ <- cv.glmnet(x, y, alpha = alpha, nfolds = k_folds, grouped = is_grpd,
                                    intercept = as.logical(i), type.measure = 'mse', ...)
             lambda_vec[j] <- cv_model_$lambda.min
             cvpred <- c(predict(cv_model_, s = 'lambda.min', newx = x))
@@ -483,7 +478,7 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
             geom_point()
     }
     gd <- do.call("grid.arrange", c(ggps))
-    if(plot_marg) print(gd)
+    if(plot_marg) plot(gd)
 
     ## handle novel seasonal factor values
 
@@ -591,14 +586,19 @@ glmnet_wrap <- function(data, full_spec, unscale_q_by_area = TRUE,
 bootstrap_ci_glmnet <- function(ncores, in_df, frm, best, has_intcpt, newx_){
 
     clst_type <- ifelse(.Platform$OS.type == 'windows', 'PSOCK', 'FORK')
-    # ncores <- parallel::detectCores() %/% 4.5
     clst <- makeCluster(spec = ncores, type = clst_type)
     registerDoParallel(clst)
+    error_indicator <- tempfile()
+
+    newx <- model.matrix(update(frm, NULL ~ .), newx_)
 
     on.exit(stopCluster(clst))
-    browser()
 
     bootstrap_samps <- parallel::parSapply(clst, 1:1000, function(x){
+
+        if(file.exists(error_indicator)) return()
+
+        set.seed(as.numeric(Sys.time()) + sample(1:1000, 1))
 
         if('season' %in% rownames(attributes(terms(frm))$factors)){
             resamp <- stratified_resample(in_df, 'season')
@@ -614,27 +614,26 @@ bootstrap_ci_glmnet <- function(ncores, in_df, frm, best, has_intcpt, newx_){
                  silent = TRUE)
 
         if(inherits(s, 'try-error')){
-            warning('Not enough y-variation to perform cross-validation')
-            # stopCluster(clst)
-            HERE
-            return(list(ci_lwr = ci[1, ], ci_upr = ci[2, ]))
+            if(grepl('is constant', attr(s, 'condition')$message)){
+                write('STOP', error_indicator)
+                return()
+            } else {
+                stop(s)
+            }
         }
 
         m <- glmnet(x, y, alpha = best$alpha, intercept = has_intcpt, lambda = s)
 
-        predict(m, s = s, newx = model.matrix(update(frm, NULL ~ .), newx_))
+        predict(m, s = s, newx = newx)
     }, simplify = TRUE)
 
+    if(sum(sapply(bootstrap_samps, is.null)) > 50){
+        warning('Not enough y-variation to perform cross-validation')
+        return(list(ci_lwr = rep(NA_real_, nrow(newx)),
+                    ci_upr = rep(NA_real_, nrow(newx))))
+    }
+
     ci <- parallel::parApply(clst, bootstrap_samps, 1, quantile, probs = c(0.025, 0.975))
-
-    # ci_lwr <- do.call(function(...) Map(function(...) parallel::clusterMap(
-    #     clst, quant025, ..., SIMPLIFY = TRUE, USE.NAMES = FALSE), ...),
-    #     bootstrap_samps)
-    # ci_upr <- do.call(function(...) Map(function(...) parallel::clusterMap(
-    #     clst, quant975, ..., SIMPLIFY = TRUE, USE.NAMES = FALSE), ...),
-    #     bootstrap_samps)
-
-    # stopCluster(clst)
 
     return(list(ci_lwr = ci[1, ], ci_upr = ci[2, ]))
 }
@@ -1308,20 +1307,24 @@ plots_and_results <- function(site_code, best, results, in_df,
     } else if(inherits(best$best_model_object, 'glmnet')){
 
         betas <- best$best_model_object$beta@Dimnames[[1]]
-        seasons_present <- str_extract(betas, 'season[1-4]') %>%
-            unique() %>%
-            na.omit() %>%
-            str_split_i('season', 2)
-
-        seasons_present <- c(seasons_present,
-                             min(as.numeric(seasons_present)) - 1)
 
         newx_ <- select(qall, all_of(site_indeps_log), any_of('season'))
+
         if('season' %in% colnames(qall)){
+
+            seasons_present <- str_extract(betas, 'season[1-4]') %>%
+                unique() %>%
+                na.omit() %>%
+                str_split_i('season', 2)
+
+            seasons_present <- c(seasons_present,
+                                 min(as.numeric(seasons_present)) - 1)
+
             newx_ <- newx_ %>%
                 mutate(season = ifelse(! season %in% seasons_present, NA, season),
                        season = as.factor(season))
         }
+
         valid_obs <- complete.cases(newx_)
         frm <- best$best_model_ignoreint
         has_intcpt <- '(Intercept)' %in% betas
@@ -1334,7 +1337,7 @@ plots_and_results <- function(site_code, best, results, in_df,
         )
 
         if(bootstrap_ci){
-            cat('Bootstrapping 95% confidence intervals on', ncores, 'cores. Watch your RAM!')
+            cat('Bootstrapping 95% confidence intervals on', ncores, 'cores. Watch your RAM!\n')
             ci <- bootstrap_ci_glmnet(ncores, in_df, frm, best, has_intcpt, newx_)
         } else {
             ci <- list(ci_lwr = rep(NA_real_, length(pred)),
@@ -1429,7 +1432,7 @@ plots_and_results <- function(site_code, best, results, in_df,
 
     asterisk <- if(inherits(best$best_model_object, 'segmented')) '*' else ''
     png(glue('figs/lm_plots/val/{site_code}_obs_v_pred.png'), 6, 6, 'in', type = 'cairo', res = 300)
-    plot(zz$Q_field, zz$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
+    plot(zz$Q_field, zz$Q_predicted, xlab = 'Field Discharge (L/s)',
          ylab = 'Predicted Discharge (L/s)',
          main = glue('Site: {site_code}; KGE: {kge1}; KGE crossval{a}: {kge2}',
                      kge1 = round(best$metrics$kge, 2),
@@ -1728,7 +1731,7 @@ plots_and_results_daily_composite <- function(site_code, best1, best2, results,
     axlim = c(0, max(c(out_data$Q_predicted, out_data$Q_field), na.rm = TRUE))
 
     png(glue('figs/lm_plots/val/{site_code}_obs_v_pred.png'), 6, 6, 'in', type = 'cairo', res = 300)
-    plot(out_data$Q_field, out_data$Q_predicted, xlab = 'NEON Field Discharge (L/s)',
+    plot(out_data$Q_field, out_data$Q_predicted, xlab = 'Field Discharge (L/s)',
          ylab = 'Predicted Discharge (L/s)',
          main = glue('Site: {site_code}; KGE: {kge1}; KGE crossval*: {kge2}',
                      kge1 = round(kge, 2),

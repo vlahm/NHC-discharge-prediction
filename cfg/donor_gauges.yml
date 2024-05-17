@@ -6,3 +6,35 @@ erwin:
     - "02097517" #morgan ck near chapel hill
     - "02097386" #booker ck near chapel hill
     - "02096846" #cane ck near orange grove. should capture precip events local to NHC headwaters
+NHCwbriffle:
+    - "02097314" #NHC at blands
+    - "02097280" #third fork ck near blands
+    - "0209725960" #third fork ck near durham
+    - "0209722970" #sandy ck near durham
+    - "02097517" #morgan ck near chapel hill
+    - "02097386" #booker ck near chapel hill
+    - "02096846" #cane ck near orange grove. should capture precip events local to NHC headwaters
+NHCcbriffle:
+    - "02097314" #NHC at blands
+    - "02097280" #third fork ck near blands
+    - "0209725960" #third fork ck near durham
+    - "0209722970" #sandy ck near durham
+    - "02097517" #morgan ck near chapel hill
+    - "02097386" #booker ck near chapel hill
+    - "02096846" #cane ck near orange grove. should capture precip events local to NHC headwaters
+NHCwbpoolUp:
+    #- "02097314" #NHC at blands
+    - "02097280" #third fork ck near blands
+    #- "0209725960" #third fork ck near durham
+    - "0209722970" #sandy ck near durham
+    #- "02097517" #morgan ck near chapel hill
+    #- "02097386" #booker ck near chapel hill
+    #- "02096846" #cane ck near orange grove. should capture precip events local to NHC headwaters
+NHCcbpoolUp:
+    - "02097314" #NHC at blands
+    - "02097280" #third fork ck near blands
+    - "0209725960" #third fork ck near durham
+    - "0209722970" #sandy ck near durham
+    - "02097517" #morgan ck near chapel hill
+    - "02097386" #booker ck near chapel hill
+    - "02096846" #cane ck near orange grove. should capture precip events local to NHC headwaters

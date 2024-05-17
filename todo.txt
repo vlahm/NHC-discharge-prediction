@@ -2,10 +2,12 @@ clean up helpers
 	clean build_dir_structure()
 X	merge 01_ into 02
 clean comments
-handle inconsistent recording intervals
-	5 and 15-minute
-need to adjust this for very few samples
-
-HERE: return appropriate thing when cv is impossible
-	is it really impossible though? yeah, i can't just run the
-	mofo without replacement. that actually invalidates cv
+X	handle inconsistent recording intervals
+X		5 and 15-minute
+X	need to adjust this for very few samples
+X	HERE: return appropriate thing when cv is impossible
+X		is it really impossible though? yeah, i can't just run the
+X		mofo without replacement. that actually invalidates cv
+X	NHC != erwin. if we want that site. gotta do more recon
+erwin site is delineated at resolution 9. all the rest are at 10 ibelieve
+	however, couldn't get erwin to delineate at that res for somer reason
