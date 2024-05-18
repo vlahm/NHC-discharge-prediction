@@ -10,3 +10,5 @@ cfg/google_auth.cfg
 *.zip
 *.swp
 junk/
+*.pdf
+raw/

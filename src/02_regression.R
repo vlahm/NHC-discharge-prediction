@@ -50,38 +50,12 @@ results <- tibble(
 
 donor_gauges <- read_yaml('cfg/donor_gauges.yml')
 
-# regress(site_code = 'erwin', framework = 'glmnet',
-# regress(site_code = 'NHCwbriffle', framework = 'glmnet',
-# regress(site_code = 'NHCcbriffle', framework = 'glmnet',
-# regress(site_code = 'NHCcbpoolUp', framework = 'glmnet',
-regress(site_code = 'NHCwbpoolUp', framework = 'glmnet',
-        custom_formula = 'discharge_log ~ `{paste(paste0(gage_ids, "_log"), collapse = "`*`")}`',
-        ncores = 8, target_daterange = c('2023-01-01', '2024-01-24'))
-
-site_ = 'NHCwbpoolUp'
-qq = read_csv('erwin_q_for_comparison.csv')
-qq$NHC_discharge_Ls = qq$NHC_discharge_m3s * 1000
-plot(qq$DateTime_UTC, qq$NHC_discharge_Ls, ylim = c(0, 5000))
-erw = read_csv('out/lm_out/predictions/erwin.csv')
-points(erw$datetime, erw$Q_predicted, col = 'purple', pch = '.')
-qp = read_csv(glue('out/lm_out/predictions/{site_}.csv'))
-points(qp$datetime, qp$Q_predicted, col = 'red', pch = '.')
-qm = read_csv(glue('in/field_Q/{site_}.csv'))
-points(qm$datetime, qm$discharge, col = 'blue', pch = 1)
-
-plot(qp$datetime, qp$Q_predicted, col = 'red', pch = '.')
-
-jj = qq %>% filter(DateTime_UTC > as.Date('2023-12-25'))
-plot(jj$DateTime_UTC, jj$NHC_discharge_Ls, ylim = c(0, 5000))
-jj[sample(1:nrow(jj), 100, replace=F), ] %>%
-    arrange(DateTime_UTC) %>%
-    select(datetime = DateTime_UTC, discharge = NHC_discharge_Ls) %>%
-    write_csv('in/field_Q/erwin.csv')
-# 'discharge_log ~ `{paste0(donor_gauges[["LECO"]], "_log")}`'
-
-# regress(site_code = 'NHC', framework = 'lm')
-# regress(site_code = 'NHC', framework = 'glmnet', bootstrap_ci = FALSE)
-# regress(site_code = 'NHC', framework = 'glmnet', ncores = 11)
+regress(site_code = 'erwin', framework = 'glmnet',
+        # custom_formula = 'discharge_log ~ `{paste(paste0(gage_ids, "_log"), collapse = "`*`")}`',
+        seasons = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1),
+        # seasons = c(1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 1, 1),
+        bootstrap_ci = FALSE,
+        ncores = 4, target_daterange = c('2016-01-01', '2024-04-30'))
 
 ## other scenarios (not yet adapted for this workflow): segmented regression ####
 
@@ -117,9 +91,6 @@ mcra_d <- assemble_q_df(neon_site = 'MCRA', ms_Q_data = mcra_d_)
 regress(neon_site = 'MCRA', framework = 'glmnet', precomputed_df = mcra_d, ncores = 9)
 
 ## other scenarios (not yet adapted for this workflow): composite regression ####
-
-#COMO: uses MacroSheds data and composite glmnet model
-neon_site <- 'COMO'
 
 gauge_ids <- donor_gauges[[neon_site]][1:2]
 como_d_ <- ms_q %>%

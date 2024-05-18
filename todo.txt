@@ -11,3 +11,19 @@ X		mofo without replacement. that actually invalidates cv
 X	NHC != erwin. if we want that site. gotta do more recon
 erwin site is delineated at resolution 9. all the rest are at 10 ibelieve
 	however, couldn't get erwin to delineate at that res for somer reason
+
+need warnings about dropping incomplete cases from fitting data
+	this can result in 0 observations for y, and the message:
+	"k_folds is 10, but there are only 0 observations. Setting k_folds to 0 (LOOCV)."
+need warnings about lack of 1-2 seasons in the fitting data.
+	"this will mean no predictions for those seasons"
+need a thing for just switching off the seasonal term
+	thought this can already be done through custom_formula
+documentation about all of this
+X	should expose some way for the season term to be customized. 2 seasons, shifted seasons, etc.
+param_counts is computed assuming 4 seasons. update this to accommodate any number of seasons (up to 12)
+something is wanky about the diag plot
+need to show this so user can decide what gauges to include.
+	left_join(field_q, site_nearbyA)
+	around line 143 of 00_helpers.R
+	probs do something interactive here

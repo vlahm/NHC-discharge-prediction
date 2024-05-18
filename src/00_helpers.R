@@ -58,6 +58,7 @@ rename_dir_structure <- function(){
 
 assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
                           datetime_snapdist_hrs = 12,
+                          seasons = c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4),
                           target_daterange = NULL, overwrite = FALSE,
                           scale_q_by_area = TRUE){
 
@@ -67,6 +68,7 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
     #   have its MacroSheds site_code as header. transformed columns will be created
     #datetime_snapdist_hrs: numeric. when joining donor gauge data to field
     #   discharge by datetime, allow joins of up to this number of hrs earlier/later
+    #seasons: a numeric vector of length 12, indicating how months should be grouped into seasons.
     #target_daterange: vector of two dates for the beginning and end of the
     #   period to be estimated. Donor gauges with insufficient data may be dropped before
     #   modeling, but those gauges might actually have data for your daterange
@@ -251,9 +253,9 @@ assemble_q_df <- function(site_code, nearby_usgs_gages = NULL, ms_Q_data = NULL,
         as_tibble() %>%
         arrange(datetime) %>%
         rename(discharge = discharge_manual) %>%
-        mutate(season = factor(lubridate::quarter(datetime)),
+        # mutate(season = factor(lubridate::quarter(datetime)),
+        mutate(season = factor(!!seasons[month(joined$datetime)]),
                discharge_log = neglog(discharge)) %>%
-        # discharge_log = boxcox_write(discharge, !!site_code)) %>%
         select(site_code, datetime, discharge, discharge_log, everything())
 
     return(joined)
@@ -302,7 +304,8 @@ assemble_q_df_daily <- function(site_code, ms_Q_data = NULL, scale_q_by_area = T
     joined = left_join(field_q, ms_Q_data, by = 'date') %>%
         arrange(date) %>%
         rename(discharge = discharge_manual) %>%
-        mutate(season = factor(lubridate::quarter(date)),
+        # mutate(season = factor(lubridate::quarter(date)),
+        mutate(season = factor(seasons[month(date)]),
                discharge_log = neglog(discharge)) %>%
         select(site_code, date, discharge, discharge_log, everything())
 
@@ -1106,6 +1109,7 @@ segmented_wrap <- function(data, model_list,
 regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
                     precomputed_df = NULL, custom_formula = NULL,
                     dummy_break = NULL, custom_gauges = NULL,
+                    seasons = c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4),
                     no_write = FALSE, bootstrap_ci = TRUE,
                     target_daterange = NULL,
                     ncores = max(parallel::detectCores() %/% 4, 2)){
@@ -1126,6 +1130,9 @@ regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
     #   shift from dummy = 0 to dummy = 1. ignored otherwise
     #custom_gauges: character vector. use if you need to override the defaults
     #   provided by cft/donor_gauges.yml, e.g. if for building composite models.
+    #seasons: a numeric vector of length 12, indicating how months should be
+    #   grouped into seasons. The first element corresponds to January, the last
+    #   to December.
     #no_write: logical. if TRUE, do not write to the `results` data.frame in the
     #   global environment, and do not write data or plots via plots_and_results.
     #bootstrap_ci: logical. should 95% confidence intervals for glmnet models
@@ -1171,7 +1178,8 @@ regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
         in_df <- assemble_q_df(site_code = site_code,
                                nearby_usgs_gages = gage_ids,
                                scale_q_by_area = scale_q_by_area,
-                               target_daterange = target_daterange)
+                               target_daterange = target_daterange,
+                               seasons = seasons)
     } else {
         in_df <- precomputed_df
     }
@@ -1228,6 +1236,7 @@ regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
             site_code, best, results, in_df,
             unscale_q_by_area = scale_q_by_area,
             dummy_break = dummy_break,
+            seasons = seasons,
             bootstrap_ci = bootstrap_ci,
             ncores = ncores
         )
@@ -1246,6 +1255,7 @@ regress <- function(site_code, framework, ..., scale_q_by_area = TRUE,
 
 plots_and_results <- function(site_code, best, results, in_df,
                               return_plot = FALSE, unscale_q_by_area = TRUE,
+                              seasons,
                               dummy_break = NULL, bootstrap_ci, ncores){
 
     #load corroborating usgs/ms site data
@@ -1273,7 +1283,8 @@ plots_and_results <- function(site_code, best, results, in_df,
         select(datetime, all_of(site_indeps), all_of(site_indeps_log))
 
     if('season' %in% indeps){
-        sites_nearby$season = factor(lubridate::quarter(sites_nearby$datetime))
+        # sites_nearby$season = factor(lubridate::quarter(sites_nearby$datetime))
+        sites_nearby$season = factor(seasons[month(sites_nearby$datetime)])
     }
 
     # #assemble neon sensor data, filtered neon sensor data, neon field data
@@ -1532,7 +1543,8 @@ plots_and_results_daily_composite <- function(site_code, best1, best2, results,
         select(date, all_of(site_indeps2), all_of(site_indeps_log2))
 
     if('season' %in% indeps1 | 'season' %in% indeps2){
-        sites_nearby$season = factor(lubridate::quarter(sites_nearby$date))
+        # sites_nearby$season = factor(lubridate::quarter(sites_nearby$date))
+        sites_nearby$season = factor(seasons[month(sites_nearby$datetime)])
     }
 
     #assemble neon sensor data, filtered neon sensor data, neon field data
