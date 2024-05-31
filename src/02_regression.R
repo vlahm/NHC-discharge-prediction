@@ -48,14 +48,12 @@ results <- tibble(
 #script at once, rather than going through line by line, you should be okay.
 #you can also grep 00_helpers.R for clst_type and hard-code it to "PSOCK"
 
-donor_gauges <- read_yaml('cfg/donor_gauges.yml')
-
 regress(site_code = 'erwin', framework = 'glmnet',
         # custom_formula = 'discharge_log ~ `{paste(paste0(gage_ids, "_log"), collapse = "`*`")}`',
         seasons = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1),
         # seasons = c(1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 1, 1),
-        bootstrap_ci = FALSE,
-        ncores = 4, target_daterange = c('2016-01-01', '2024-04-30'))
+        bootstrap_ci = TRUE,
+        ncores = 6, target_daterange = c('2016-09-21', '2024-02-29'))
 
 ## other scenarios (not yet adapted for this workflow): segmented regression ####
 

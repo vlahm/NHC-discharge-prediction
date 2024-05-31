@@ -1,5 +1,5 @@
 erwin:
-    - "02097314" #NHC at blands
+    - "02097314" #NHC at blands [remove for composite part 3]
     - "02097280" #third fork ck near blands
 #    - "0209725960" #third fork ck near durham
     - "0209722970" #sandy ck near durham
@@ -10,7 +10,7 @@ erwin:
 #    - "0209734440" #bolin creek in chapel hill (urban)
     - "02097464" #morgan creek near whitecross
     - "0209741955" #northeast creek near genlee
-    - "0208675010" #ellerbe
+    - "0208675010" #ellerbe [remove for composite part 2]
 NHCwbriffle:
     - "02097314" #NHC at blands
     - "02097280" #third fork ck near blands
